@@ -526,11 +526,7 @@ func ingress(kc *kubernetes.Clientset, ns, service string) (url.URL, error) {
 			time.Sleep(5 * time.Second)
 		}
 		var best url.URL
-		points := 0
 		for _, ing := range ings.Items {
-			// does this ingress route to the hook service?
-			cur := -1
-			var maybe url.URL
 			for _, r := range ing.Spec.Rules {
 				h := r.IngressRuleValue.HTTP
 				if h == nil {
@@ -540,53 +536,14 @@ func ingress(kc *kubernetes.Clientset, ns, service string) (url.URL, error) {
 					if p.Backend.ServiceName != service {
 						continue
 					}
-					maybe.Scheme = "http"
-					maybe.Host = r.Host
-					maybe.Path = p.Path
-					cur = 0
+					best.Scheme = "https"
+					best.Host = r.Host
+					best.Path = p.Path
 					break
 				}
 			}
-			if cur < 0 {
-				continue // no
-			}
-
-			// does it have an ip or hostname?
-			for _, tls := range ing.Spec.TLS {
-				for _, h := range tls.Hosts {
-					if h == maybe.Host {
-						cur = 3
-						maybe.Scheme = "https"
-						break
-					}
-				}
-			}
-
-			if cur == 0 {
-				for _, i := range ing.Status.LoadBalancer.Ingress {
-					if maybe.Host != "" && maybe.Host == i.Hostname {
-						cur = 2
-						break
-					}
-					if i.IP != "" {
-						cur = 1
-						if maybe.Host == "" {
-							maybe.Host = i.IP
-						}
-						break
-					}
-				}
-			}
-			if cur > points {
-				best = maybe
-				points = cur
-			}
 		}
-		if points > 0 {
-			return best, nil
-		}
-		fmt.Print(".")
-		time.Sleep(1 * time.Second)
+		return best, nil
 	}
 }
 

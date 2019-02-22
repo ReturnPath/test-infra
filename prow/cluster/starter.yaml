@@ -420,12 +420,16 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   namespace: default
-  name: ing
+  name: prow
+  annotations:
+    alb.ingress.kubernetes.io/alb-name: test-stock-web-rp-ext-gh
+    kubernetes.io/ingress.class: rpalb
 spec:
   rules:
-  - http:
+  - host: prow.tst.returnpath.net
+    http:
       paths:
-      - path: /* # Correct for GKE, need / on many other distros
+      - path: /
         backend:
           serviceName: deck
           servicePort: 80
@@ -480,6 +484,18 @@ spec:
       - name: plugins
         configMap:
           name: plugins
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: prow.tst.returnpath.net
+  namespace: default
+spec:
+  endpoints:
+  - dnsName: prow.tst.returnpath.net
+    recordType: CNAME
+    targets:
+    - test-stock-web-rp-ext-gh-1520388870.us-east-1.elb.amazonaws.com
 ---
 kind: ServiceAccount
 apiVersion: v1
